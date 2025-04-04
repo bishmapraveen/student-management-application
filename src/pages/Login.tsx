@@ -1,69 +1,64 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
+import { useAuthStore } from '../store/authStore';
 import { BookOpen } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuthStore();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
-    // Login using Supabase auth
-    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (loginError || !loginData.user) {
-      setLoading(false);
-      setError(loginError?.message || 'Login failed');
+    if (loginError) {
+      setError(loginError.message);
       return;
     }
 
-    // Check if email is verified
-    if (!loginData.user.email_confirmed_at) {
-      setLoading(false);
+    const user = data.user;
+
+    if (!user.email_confirmed_at) {
       setError('Please verify your email before logging in.');
       return;
     }
 
-    const userId = loginData.user.id;
-
-    // Try fetching profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', user.id)
       .single();
 
     if (!profile) {
-      // Profile not found — create one using auth info
       const { error: insertError } = await supabase.from('profiles').insert([
         {
-          id: userId,
-          email: loginData.user.email,
-          name: loginData.user.user_metadata?.name || '',
-          role: 'student', // default role
+          id: user.id,
+          email,
+          name: email.split('@')[0],
+          role: 'student',
         },
       ]);
-
       if (insertError) {
-        setLoading(false);
-        setError('Could not create user profile.');
+        setError('Failed to create profile.');
         return;
       }
     }
 
-    // Success
-    setLoading(false);
-    navigate('/dashboard');
+    login({
+      id: user.id,
+      name: profile?.name || email.split('@')[0],
+      email: profile?.email || email,
+      role: profile?.role || 'student',
+      connections: [],
+    });
+
+    navigate('/');
   };
 
   return (
@@ -73,7 +68,7 @@ const Login: React.FC = () => {
           <BookOpen className="h-12 w-12 text-indigo-600" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Sign in to your account
+          Sign in to EduManager
         </h2>
       </div>
 
@@ -81,50 +76,26 @@ const Login: React.FC = () => {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm"
-              />
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
+              <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm" />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm"
-              />
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+              <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm" />
             </div>
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            {loading && <p className="text-sm text-gray-500">Logging in...</p>}
+            {error && <p className="text-red-600 text-sm">{error}</p>}
 
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Log in
+            <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md text-white bg-indigo-600 hover:bg-indigo-700 text-sm font-medium">
+              Sign in
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Sign up
-            </Link>
-          </p>
+          <div className="mt-4 text-center text-sm text-gray-600">
+            Don’t have an account?{' '}
+            <Link to="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">Sign up</Link>
+          </div>
         </div>
       </div>
     </div>
