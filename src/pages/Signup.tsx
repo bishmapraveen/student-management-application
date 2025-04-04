@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
+import { useNavigate, Link } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';
 
-const Login: React.FC = () => {
+const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
       setError(error.message);
     } else {
-      navigate('/');
+      alert('Account created! You can login now.');
+      navigate('/login');
     }
   };
 
@@ -27,13 +28,13 @@ const Login: React.FC = () => {
           <BookOpen className="h-12 w-12 text-indigo-600" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Sign in to EduManager
+          Create your EduManager account
         </h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleLogin}>
+          <form className="space-y-6" onSubmit={handleSignup}>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <div>
               <label className="block text-sm font-medium text-gray-700">Email address</label>
@@ -59,12 +60,12 @@ const Login: React.FC = () => {
               type="submit"
               className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700"
             >
-              Sign In
+              Sign Up
             </button>
             <p className="text-sm text-center mt-2">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-indigo-600 hover:underline">
-                Create one
+              Already have an account?{' '}
+              <Link to="/login" className="text-indigo-600 hover:underline">
+                Sign in
               </Link>
             </p>
           </form>
@@ -74,4 +75,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default Signup;
