@@ -1,4 +1,3 @@
-// src/pages/Signup.tsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -7,27 +6,30 @@ import { BookOpen } from 'lucide-react';
 const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState<'student' | 'faculty' | 'admin'>('student');
   const [error, setError] = useState('');
-
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setMessage('');
+    setSuccess('');
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     });
 
-    if (signUpError) {
-      setError(signUpError.message);
+    if (signUpError || !data.user) {
+      setError(signUpError?.message || 'Signup failed');
       return;
     }
 
-    setMessage('Signup successful! Please check your email to verify your account.');
+    setSuccess('Signup successful! Please check your email to confirm your account.');
+
+    // Profiles will be created after login
   };
 
   return (
@@ -36,14 +38,32 @@ const Signup: React.FC = () => {
         <div className="flex justify-center">
           <BookOpen className="h-12 w-12 text-indigo-600" />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Create an account</h2>
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Create an account
+        </h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSignup}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email address
+              </label>
               <input
                 id="email"
                 type="email"
@@ -55,7 +75,9 @@ const Signup: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
               <input
                 id="password"
                 type="password"
@@ -66,8 +88,24 @@ const Signup: React.FC = () => {
               />
             </div>
 
-            {message && <p className="text-green-600 text-sm">{message}</p>}
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                Role
+              </label>
+              <select
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as 'student' | 'faculty' | 'admin')}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm"
+              >
+                <option value="student">Student</option>
+                <option value="faculty">Faculty</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {success && <p className="text-green-600 text-sm">{success}</p>}
 
             <button
               type="submit"
