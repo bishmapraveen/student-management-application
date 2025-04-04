@@ -125,6 +125,14 @@ const Signup: React.FC = () => {
               Sign up
             </button>
           </form>
+
+          {/* 🔗 Signup redirect link */}
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Already have an account?{' '}
+            <a href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Sign in
+            </a>
+          </p>
         </div>
       </div>
     </div>
