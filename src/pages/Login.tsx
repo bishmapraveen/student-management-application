@@ -20,25 +20,46 @@ const Login: React.FC = () => {
       password,
     });
 
-    if (loginError) {
-      setError(loginError.message);
+    if (loginError || !data.user) {
+      setError(loginError?.message || 'Login failed');
       return;
     }
 
-    const userId = data.user?.id;
+    const userId = data.user.id;
 
-    const { data: profileData } = await supabase
+    // Check if profile exists
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
-    if (profileData) {
+    if (!profileData && !profileError) {
+      // If profile is missing, insert it
+      const defaultName = email.split('@')[0];
+      await supabase.from('profiles').insert([
+        {
+          id: userId,
+          email,
+          name: defaultName,
+          role: 'student', // Default role if not set during signup
+        },
+      ]);
+    }
+
+    // Fetch the profile again after insert
+    const { data: finalProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (finalProfile) {
       login({
-        id: profileData.id,
-        name: profileData.name || email.split('@')[0],
-        email: profileData.email,
-        role: profileData.role || 'student',
+        id: finalProfile.id,
+        name: finalProfile.name || email.split('@')[0],
+        email: finalProfile.email,
+        role: finalProfile.role || 'student',
         connections: [],
       });
 

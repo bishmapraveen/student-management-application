@@ -25,22 +25,8 @@ const Signup: React.FC = () => {
       return;
     }
 
-    // Save role and name to profiles table
-    const { error: profileError } = await supabase.from('profiles').insert([
-      {
-        id: data.user.id,
-        email,
-        name,
-        role,
-      },
-    ]);
-
-    if (profileError) {
-      setError(profileError.message);
-      return;
-    }
-
-    alert('Signup successful! Please check your email to confirm.');
+    // ✅ Do NOT insert into profiles here — will be done after login (Option 1)
+    alert('Signup successful! Please check your email to confirm your account.');
     navigate('/login');
   };
 
@@ -126,7 +112,6 @@ const Signup: React.FC = () => {
             </button>
           </form>
 
-          {/* 🔗 Signup redirect link */}
           <p className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{' '}
             <a href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
