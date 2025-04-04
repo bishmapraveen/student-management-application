@@ -1,3 +1,4 @@
+// src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -8,58 +9,46 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuthStore();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+    setResendSuccess(false);
 
     const { data, error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (loginError || !data.user) {
-      setError(loginError?.message || 'Login failed');
+    if (loginError) {
+      setError(loginError.message);
+      setLoading(false);
       return;
     }
 
-    const userId = data.user.id;
-
-    // Check if profile exists
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (!profileData && !profileError) {
-      // If profile is missing, insert it
-      const defaultName = email.split('@')[0];
-      await supabase.from('profiles').insert([
-        {
-          id: userId,
-          email,
-          name: defaultName,
-          role: 'student', // Default role if not set during signup
-        },
-      ]);
+    if (!data.user?.email_confirmed_at) {
+      setError('Please verify your email before logging in.');
+      setLoading(false);
+      return;
     }
 
-    // Fetch the profile again after insert
-    const { data: finalProfile } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', data.user.id)
       .single();
 
-    if (finalProfile) {
+    if (profileData) {
       login({
-        id: finalProfile.id,
-        name: finalProfile.name || email.split('@')[0],
-        email: finalProfile.email,
-        role: finalProfile.role || 'student',
+        id: profileData.id,
+        name: profileData.name || email.split('@')[0],
+        email: profileData.email,
+        role: profileData.role || 'student',
         connections: [],
       });
 
@@ -67,6 +56,17 @@ const Login: React.FC = () => {
     } else {
       setError('Profile not found.');
     }
+
+    setLoading(false);
+  };
+
+  const resendEmail = async () => {
+    setResendSuccess(false);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    if (!error) setResendSuccess(true);
   };
 
   return (
@@ -113,14 +113,30 @@ const Login: React.FC = () => {
               />
             </div>
 
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && (
+              <p className="text-red-600 text-sm">
+                {error}{' '}
+                {error.includes('verify') && (
+                  <button
+                    type="button"
+                    onClick={resendEmail}
+                    className="text-indigo-600 underline ml-2"
+                  >
+                    Resend email
+                  </button>
+                )}
+              </p>
+            )}
+
+            {resendSuccess && <p className="text-green-600 text-sm">Verification email resent.</p>}
 
             <div>
               <button
                 type="submit"
+                disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md text-white bg-indigo-600 hover:bg-indigo-700 text-sm font-medium"
               >
-                Sign in
+                {loading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>

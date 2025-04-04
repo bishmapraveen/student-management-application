@@ -1,3 +1,4 @@
+// src/pages/Signup.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -9,11 +10,15 @@ const Signup: React.FC = () => {
   const [name, setName] = useState('');
   const [role, setRole] = useState<'student' | 'faculty' | 'admin'>('student');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
+    setLoading(true);
 
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
@@ -22,11 +27,12 @@ const Signup: React.FC = () => {
 
     if (signUpError || !data.user) {
       setError(signUpError?.message || 'Signup failed');
+      setLoading(false);
       return;
     }
 
-    // ✅ Do NOT insert into profiles here — will be done after login (Option 1)
-    alert('Signup successful! Please check your email to confirm your account.');
+    setMessage('Signup successful! Please verify your email before logging in.');
+    setLoading(false);
     navigate('/login');
   };
 
@@ -103,12 +109,14 @@ const Signup: React.FC = () => {
             </div>
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
+            {message && <p className="text-green-600 text-sm">{message}</p>}
 
             <button
               type="submit"
+              disabled={loading}
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
             >
-              Sign up
+              {loading ? 'Signing up...' : 'Sign up'}
             </button>
           </form>
 
