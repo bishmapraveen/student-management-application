@@ -1,3 +1,5 @@
+// src/pages/Login.tsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -15,41 +17,37 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    // Step 1: Sign in with Supabase Auth
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (signInError || !data.user) {
-      setError(signInError?.message || 'Login failed');
+    if (loginError) {
+      setError(loginError.message);
       return;
     }
 
-    const userId = data.user.id;
+    const userId = data.user?.id;
 
-    // Step 2: Fetch user profile (including role) from 'profiles' table
-    const { data: profile, error: profileError } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
-    if (profileError || !profile) {
-      setError('User profile not found.');
-      return;
+    if (profileData) {
+      login({
+        id: profileData.id,
+        name: profileData.name || email.split('@')[0],
+        email: profileData.email,
+        role: profileData.role || 'student',
+        connections: [],
+      });
+
+      navigate('/');
+    } else {
+      setError('Profile not found.');
     }
-
-    // Step 3: Save user in Zustand store
-    login({
-      id: userId,
-      name: profile.name || '',
-      email: email,
-      role: profile.role || 'student',
-    });
-
-    // Step 4: Navigate to dashboard
-    navigate('/');
   };
 
   return (
@@ -72,11 +70,12 @@ const Login: React.FC = () => {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
               />
             </div>
 
@@ -86,22 +85,25 @@ const Login: React.FC = () => {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
               />
             </div>
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && <p className="text-red-600 text-sm">{error}</p>}
 
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Sign in
-            </button>
+            <div>
+              <button
+                type="submit"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Sign in
+              </button>
+            </div>
           </form>
         </div>
       </div>
