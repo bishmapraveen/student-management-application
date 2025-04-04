@@ -10,7 +10,6 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuthStore();
 
@@ -18,29 +17,31 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    setResendSuccess(false);
 
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (loginError) {
-      setError(loginError.message);
-      setLoading(false);
+    setLoading(false);
+
+    if (signInError) {
+      setError(signInError.message);
       return;
     }
 
-    if (!data.user?.email_confirmed_at) {
+    const user = data.user;
+
+    if (!user?.email_confirmed_at) {
       setError('Please verify your email before logging in.');
-      setLoading(false);
       return;
     }
 
+    // Fetch profile data
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', data.user.id)
+      .eq('id', user.id)
       .single();
 
     if (profileData) {
@@ -56,17 +57,6 @@ const Login: React.FC = () => {
     } else {
       setError('Profile not found.');
     }
-
-    setLoading(false);
-  };
-
-  const resendEmail = async () => {
-    setResendSuccess(false);
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-    });
-    if (!error) setResendSuccess(true);
   };
 
   return (
@@ -89,7 +79,6 @@ const Login: React.FC = () => {
               </label>
               <input
                 id="email"
-                name="email"
                 type="email"
                 required
                 value={email}
@@ -104,7 +93,6 @@ const Login: React.FC = () => {
               </label>
               <input
                 id="password"
-                name="password"
                 type="password"
                 required
                 value={password}
@@ -113,32 +101,15 @@ const Login: React.FC = () => {
               />
             </div>
 
-            {error && (
-              <p className="text-red-600 text-sm">
-                {error}{' '}
-                {error.includes('verify') && (
-                  <button
-                    type="button"
-                    onClick={resendEmail}
-                    className="text-indigo-600 underline ml-2"
-                  >
-                    Resend email
-                  </button>
-                )}
-              </p>
-            )}
+            {error && <p className="text-red-600 text-sm">{error}</p>}
 
-            {resendSuccess && <p className="text-green-600 text-sm">Verification email resent.</p>}
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md text-white bg-indigo-600 hover:bg-indigo-700 text-sm font-medium"
-              >
-                {loading ? 'Signing in...' : 'Sign in'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md text-white bg-indigo-600 hover:bg-indigo-700 text-sm font-medium"
+              disabled={loading}
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
           </form>
 
           <div className="mt-4 text-center text-sm text-gray-600">
